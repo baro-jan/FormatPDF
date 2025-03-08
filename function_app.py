@@ -20,6 +20,6 @@ def receiveDoc(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully. Hurray.")
     else:
         return func.HttpResponse(
-             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
+             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response. Hurray",
              status_code=200
         )
