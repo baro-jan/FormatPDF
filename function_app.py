@@ -1,5 +1,12 @@
 import azure.functions as func
-import logging
+import json
+import base64
+import io
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
+import pypandoc
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
