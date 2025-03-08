@@ -56,7 +56,7 @@ def process_docx(doc_bytes):
     - Format the merged cell (bold, white text, font size 14, dark blue background)
     - Returns modified DOCX as bytes
     """
-try:
+    try:
         # Load the DOCX from bytes
         doc = Document(io.BytesIO(doc_bytes))
 
@@ -72,17 +72,13 @@ try:
                     col2_text = col2.text.strip().lower()
                     if "section" in col2_text:
                         # Remove "section" and clean up text
-                        cleaned_text = col2.text.replace("Section", "").replace("section", "").strip()
+                        col2.text = col2.text.replace("Section", "").strip()
+                        col2.text = col2.text.replace("section", "").strip()
 
                         # Merge column 2 into column 1
                         col1.merge(col2)
 
-                        # Preserve column 1's original text and only add cleaned text if it's not empty
-                        col1_text = col1.text.strip()
-                        if cleaned_text:
-                            col1.text = col1_text + " " + cleaned_text
-                        else:
-                            col1.text = col1_text  # Keep col1 as it is if cleaned_text is empty
+                        col1.text = col1.text.strip()
 
                         # Apply formatting only to merged rows
                         for paragraph in col1.paragraphs:
