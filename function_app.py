@@ -9,6 +9,7 @@ from docx import Document # type: ignore
 from docx.shared import Pt, RGBColor # type: ignore
 from docx.oxml import parse_xml # type: ignore
 from docx.oxml.ns import nsdecls # type: ignore
+from docx.oxml import etree # type: ignore
 import pypandoc # type: ignore
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
@@ -27,7 +28,7 @@ def receiveDoc(req: func.HttpRequest) -> func.HttpResponse:
         input_base64 = req_body.get("base64", "")
 
         if not input_base64:
-            return func.HttpResponse(json.dumps({"message": "No input base64 provided", "base64": None}), status_code=400)
+            return func.HttpResponse(json.dumps({"message": "No input base64 provided", "base64": None}), status_code=400, mimetype="application/json")
 
         # Decode base64 to DOCX bytes
         doc_bytes = base64.b64decode(input_base64)
@@ -37,15 +38,15 @@ def receiveDoc(req: func.HttpRequest) -> func.HttpResponse:
 
         # If processing failed
         if modified_docx_bytes is None:
-            return func.HttpResponse(json.dumps({"message": message, "base64": None}), status_code=500)
+            return func.HttpResponse(json.dumps({"message": message, "base64": None}), status_code=500, mimetype="application/json")
 
         # Encode modified DOCX as base64
         output_base64 = base64.b64encode(modified_docx_bytes).decode("utf-8")
 
-        return func.HttpResponse(json.dumps({"message": message, "base64": output_base64}), status_code=200)
+        return func.HttpResponse(json.dumps({"message": message, "base64": output_base64}), status_code=200, mimetype="application/json")
 
     except Exception as e:
-        return func.HttpResponse(json.dumps({"message": f"Unexpected error: {str(e)}", "base64": None}), status_code=500)
+        return func.HttpResponse(json.dumps({"message": f"Unexpected error: {str(e)}", "base64": None}), status_code=500, mimetype="application/json")
 
 
 def process_docx(doc_bytes):
@@ -59,6 +60,9 @@ def process_docx(doc_bytes):
     try:
         # Load the DOCX from bytes
         doc = Document(io.BytesIO(doc_bytes))
+
+         # **Step 1: Remove all content controls first**
+        doc = remove_content_controls(doc)
 
         # Process the first table in the document
         if doc.tables:
@@ -100,3 +104,20 @@ def process_docx(doc_bytes):
 
     except Exception as e:
         return None, f"Processing error: {str(e)}"
+
+def remove_content_controls(doc):
+    """
+    Removes all content controls from the document while keeping the text inside.
+    """
+    for sdt in doc._element.xpath('//w:sdt', namespaces=doc._element.nsmap):
+        # Extract the text content inside the content control
+        text_elements = sdt.xpath('.//w:t', namespaces=sdt.nsmap)
+        text_content = " ".join([t.text for t in text_elements if t.text])
+
+        # Create a new text node with the extracted content
+        new_text = parse_xml(f'<w:t xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">{text_content}</w:t>')
+
+        # Replace the content control with the new text node
+        sdt.getparent().replace(sdt, new_text)
+
+    return doc  # Return modified document
